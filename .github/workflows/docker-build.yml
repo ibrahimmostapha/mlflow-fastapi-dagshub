@@ -1,0 +1,29 @@
+name: Build FastAPI Docker Image
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image (fetches latest model from DagsHub via MLflow)
+        run: docker build -t digits-fastapi:latest .
+
+      - name: Smoke test /predict endpoint
+        run: |
+          docker run -d --name test-api -p 8000:8000 digits-fastapi:latest
+          sleep 5
+          curl -f -X POST http://localhost:8000/predict \
+            -H "Content-Type: application/json" \
+            -d '{"features": [0,0,5,13,9,1,0,0,0,0,13,15,10,15,5,0,0,3,15,2,0,11,8,0,0,4,12,0,0,8,8,0,0,5,8,0,0,9,8,0,0,4,11,0,1,12,7,0,0,2,14,5,10,12,0,0,0,0,6,13,10,0,0,0]}'
+          echo ""
+          docker stop test-api
